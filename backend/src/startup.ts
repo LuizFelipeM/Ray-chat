@@ -7,7 +7,8 @@ import chatsService from "./services/chatsService";
 
 function startup(server: http.Server): void {
     
-    cacheMessages().then(() => Websocket(server))
+    Websocket(server)
+    // cacheMessages().then(() => Websocket(server))
 
     // setInterval(async () => {
     //     const ids = (await chatsServ.getAllChatsId()).map(id => id.id)

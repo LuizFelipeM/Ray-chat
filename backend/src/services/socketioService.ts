@@ -6,6 +6,7 @@ import { ChatsContentsDto } from "../interfaces/Dtos/ChatsContentsDto";
 import redisService from "./redisService";
 import chatsService from "./chatsService";
 import usersService from "./usersService";
+import chatsContentsService from "./chatsContentsService";
 
 let io: socketio.Server
 
@@ -15,26 +16,18 @@ let io: socketio.Server
     entidades, tipos e interfaces
 */
 
-const Websocket = (
-    server: Server
-) => {
+const Websocket = (server: Server) => {
     io = socketio(server)
-
     setup()
 }
 
 function setup(): void {
     io.on('connection', socket => {
-        io.on('disconnect', () => console.log(`Socket ${socket.id} disconnected`));
+        io.on('disconnect', () => console.log(`Socket ${socket.id} disconnected`))
 
-        handleConnection(socket);
+        handleConnection(socket)
 
-        socket.on('message', (message: ChatsContentsDto) => {
-            console.log('message', message)
-
-            io.to(room.createName(message.chat_id)).emit('message', message)
-            redisService.setMessage(message)
-        })
+        handleMessage(socket)
     })
 }
 
@@ -56,18 +49,23 @@ async function handleConnection(socket: socketio.Socket) {
 
     
     // redisService.setData('users', email, scoketId)
-    socket.emit('userInfo', { id: user.id, name: user.name })
+    const id = user.id
+    const name = user.name
+    socket.emit('userInfo', { id, name })
     
     const chatList = await chatsService.getChatListByUserId(user.id)
 
-    chatList.forEach(chat => {
-        socket.join(room.createName(chat.id), (err: any) => { if(err) console.error(err) })
-        redisService.getAllMessages(chat.id)
-            .then(messages => socket.emit('messagesOnChat', chat.id, messages))
-    })
+    chatList.forEach(chat => socket.join(room.createName(chat.id), (err) => { if(err) console.error(err) }))
     
     socket.emit('chatList', chatList)
     //socket.emit('message', message));
+}
+
+function handleMessage(socket: socketio.Socket) {
+    socket.on('message', (message: ChatsContentsDto) => {
+        io.to(room.createName(message.chat_id))
+            .emit('message', message)
+    })
 }
 
 export default Websocket;
